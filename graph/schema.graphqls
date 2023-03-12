@@ -1,0 +1,45 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+scalar Void
+scalar Time
+
+type FeedResource {
+  url: String!
+  title: String!
+  created: Time!
+  modified: Time!
+  published: Time!
+  active: Boolean!
+}
+
+type FeedArticle {
+  created: Time!
+  published: Time!
+  resource_id: String!
+  resource_title: String!
+  link: String!
+  title: String!
+  description: String!
+  content: String!
+  author: String!
+  image: String!
+}
+
+type Query {
+  resources (active: Boolean!): [FeedResource!]!
+  articles (after: Time!): [FeedArticle!]!
+}
+
+input NewResource {
+  url: String!
+}
+
+type Mutation {
+  addResources(resources: [NewResource!]!): Void
+}
+
+type Subscription {
+  articles: [FeedArticle!]!
+}
