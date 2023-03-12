@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/mmcdole/gofeed v1.2.0
+	github.com/mmcdole/gofeed v1.2.1
 	github.com/reugn/go-quartz v0.6.0
 	github.com/uptrace/opentelemetry-go-extra/otelzap v0.1.18
 	github.com/vektah/gqlparser/v2 v2.5.1
@@ -35,7 +35,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/mmcdole/goxpp v0.0.0-20200921145534-2f3784f67354 // indirect
+	github.com/mmcdole/goxpp v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
