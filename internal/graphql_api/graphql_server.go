@@ -6,6 +6,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/sealbro/go-feed-me/graph"
 	"github.com/sealbro/go-feed-me/graph/model"
@@ -19,14 +20,11 @@ import (
 )
 
 type GraphqlServer struct {
-	*api.PublicApi
-
 	resolvers *graph.Resolver
 	logger    *logger.Logger
 }
 
 func NewGraphqlServer(logger *logger.Logger,
-	api *api.PublicApi,
 	articleRepository *storage.ArticleRepository,
 	resourceRepository *storage.ResourceRepository,
 	subscriptionManager *notifier.SubscriptionManager[*model.FeedArticle]) *GraphqlServer {
@@ -36,14 +34,13 @@ func NewGraphqlServer(logger *logger.Logger,
 			ResourceRepository:  resourceRepository,
 			SubscriptionManager: subscriptionManager,
 		},
-		PublicApi: api,
-		logger:    logger,
+		logger: logger,
 	}
 
 	return graphqlApi
 }
 
-func (server *GraphqlServer) RegisterRoutes() {
+func (server *GraphqlServer) RegisterRoutes(registrar api.Registrar) {
 	urlPrefix := "graphql"
 
 	schema := graph.NewExecutableSchema(graph.Config{Resolvers: server.resolvers})
@@ -60,12 +57,15 @@ func (server *GraphqlServer) RegisterRoutes() {
 	})
 	srv.Use(extension.Introspection{})
 
-	endpoint := server.Prefix(urlPrefix, "/query")
-	playgroundEndpoint := server.Prefix(urlPrefix, "/")
-	server.Router.Handle(playgroundEndpoint, playground.Handler("GraphQL playground", endpoint))
-	server.Router.Handle(endpoint, srv)
+	endpoint := registrar.Prefix(urlPrefix, "/query")
+	playgroundEndpoint := registrar.Prefix(urlPrefix, "/")
 
-	graphqlUrl := fmt.Sprintf("http://%s%s", server.PublicApi.Address, playgroundEndpoint)
+	registrar.RegisterRoutesFunc(func(router *mux.Router) {
+		router.Handle(playgroundEndpoint, playground.Handler("GraphQL playground", endpoint))
+		router.Handle(endpoint, srv)
+	})
+
+	graphqlUrl := fmt.Sprintf("http://%s%s", registrar.Addr(), playgroundEndpoint)
 
 	server.logger.Info("GraphQl server", zap.String("url", graphqlUrl))
 }

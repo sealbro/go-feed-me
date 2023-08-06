@@ -36,9 +36,8 @@ func NewDiscordSubscriber(logger *logger.Logger, config *DiscordConfig,
 }
 
 func (s *DiscordSubscriber) Subscribe(ctx context.Context) error {
-	cancel, cancelFunc := context.WithCancel(ctx)
-	defer cancelFunc()
-	events, err := s.subscriptionManager.AddSubscriber(cancel)
+	cancelCtx, cancelFunc := context.WithCancel(ctx)
+	events, err := s.subscriptionManager.AddSubscriber(cancelCtx, "discord")
 	if err != nil {
 		return err
 	}

@@ -18,13 +18,21 @@ func NewPublicApi(config *PublicApiConfig) *PublicApi {
 	}
 }
 
-func (api *PublicApi) Prefix(serverName string, path string) string {
-	return fmt.Sprintf("/%s/%s%s", api.ApplicationSlug, serverName, path)
-}
-
-func (api *PublicApi) BuildHttpServer() *http.Server {
+func (api *PublicApi) Build() *http.Server {
 	return &http.Server{
 		Addr:    api.Address,
 		Handler: api.Router,
 	}
+}
+
+func (api *PublicApi) Addr() string {
+	return api.Address
+}
+
+func (api *PublicApi) RegisterRoutesFunc(fn func(router *mux.Router)) {
+	fn(api.Router)
+}
+
+func (api *PublicApi) Prefix(serverName string, path string) string {
+	return fmt.Sprintf("/%s/%s%s", api.ApplicationSlug, serverName, path)
 }

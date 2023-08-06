@@ -3,7 +3,6 @@ package notifier
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/sealbro/go-feed-me/pkg/graceful"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"go.uber.org/zap"
@@ -64,21 +63,21 @@ func (manager *SubscriptionManager[T]) Notify(events ...T) {
 	}
 }
 
-func (manager *SubscriptionManager[T]) AddSubscriber(ctx context.Context) (chan []T, error) {
+func (manager *SubscriptionManager[T]) AddSubscriber(ctx context.Context, uniqSubscriberId string) (chan []T, error) {
 	if manager.closed {
 		return nil, fmt.Errorf("SubscriptionManager closed the connection")
 	}
 
-	key := uuid.New().String()
+	key := uniqSubscriberId
 	ch := make(chan []T)
 	manager.subscribers[key] = ch
 
-	manager.logger.Ctx(ctx).Info("SubscriptionManager - Added new subscriber", zap.String("key", key))
+	manager.logger.Ctx(ctx).Info("SubscriptionManager - Added new subscriber", zap.String("subscriber_id", key))
 
 	go func() {
 		<-ctx.Done()
 		manager.RemoveSubscriber(key)
-		manager.logger.Ctx(ctx).Info("SubscriptionManager - Removed subscriber", zap.String("key", key))
+		manager.logger.Ctx(ctx).Info("SubscriptionManager - Removed subscriber", zap.String("subscriber_id", key))
 	}()
 
 	return ch, nil

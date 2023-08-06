@@ -29,69 +29,16 @@ type CrawlerSettings struct {
 	*logger.LoggerConfig
 	*sqlite.SqliteConfig
 	*api.PublicApiConfig
+	*api.PrivateApiConfig
 	*subscribers.DiscordConfig
 }
 
-func NewSettings() (*CrawlerSettings, *logger.LoggerConfig, *sqlite.SqliteConfig, *api.PublicApiConfig, *subscribers.DiscordConfig) {
-	settings := &CrawlerSettings{}
+var diContainer *dig.Container
 
-	err := envconfig.Process("SEALBRO", settings)
-	if err != nil {
-		panic(fmt.Errorf("can not load settings: %v", err))
-	}
-
-	return settings, settings.LoggerConfig, settings.SqliteConfig, settings.PublicApiConfig, settings.DiscordConfig
-}
-
-func NewApplication(logger *logger.Logger,
-	collection *graceful.ShutdownCloser,
-	daemon *job.Daemon,
-	discordSubscriber *subscribers.DiscordSubscriber,
-	graphqlServer *graphql_api.GraphqlServer) graceful.Application {
-	graphqlServer.RegisterRoutes()
-
-	httpServer := graphqlServer.PublicApi.BuildHttpServer()
-
-	return &graceful.Graceful{
-		Logger: logger,
-		StartAction: func(ctx context.Context) error {
-			group, errCtx := errgroup.WithContext(ctx)
-
-			group.Go(func() error {
-				daemon.Start(errCtx)
-				return nil
-			})
-
-			group.Go(func() error {
-				return discordSubscriber.Subscribe(errCtx)
-			})
-
-			group.Go(func() error {
-				return httpServer.ListenAndServe()
-			})
-
-			return group.Wait()
-		},
-		ShutdownAction: func(ctx context.Context) error {
-			group, errCtx := errgroup.WithContext(ctx)
-
-			group.Go(func() error {
-				return collection.Close()
-			})
-
-			group.Go(func() error {
-				return httpServer.Shutdown(errCtx)
-			})
-
-			return group.Wait()
-		},
-	}
-}
-
-func BuildApplication() *dig.Container {
+func init() {
 	container := dig.New()
 
-	provideOrPanic(container, NewSettings)
+	provideOrPanic(container, newSettings)
 	provideOrPanic(container, logger.NewLogger)
 	provideOrPanic(container, graceful.NewShutdownCloser)
 
@@ -110,9 +57,78 @@ func BuildApplication() *dig.Container {
 	provideOrPanic(container, api.NewPrivateApi)
 	provideOrPanic(container, graphql_api.NewGraphqlServer)
 
-	provideOrPanic(container, NewApplication)
+	provideOrPanic(container, newApplication)
 
-	return container
+	diContainer = container
+}
+
+func newSettings() (*CrawlerSettings, *logger.LoggerConfig, *sqlite.SqliteConfig, *api.PublicApiConfig, *api.PrivateApiConfig, *subscribers.DiscordConfig) {
+	settings := &CrawlerSettings{}
+
+	err := envconfig.Process("", settings)
+	if err != nil {
+		panic(fmt.Errorf("can not load settings: %v", err))
+	}
+
+	return settings, settings.LoggerConfig, settings.SqliteConfig, settings.PublicApiConfig, settings.PrivateApiConfig, settings.DiscordConfig
+}
+
+func newApplication(logger *logger.Logger,
+	collection *graceful.ShutdownCloser,
+	daemon *job.Daemon,
+	discordSubscriber *subscribers.DiscordSubscriber,
+	publicApi *api.PublicApi,
+	privateApi *api.PrivateApi,
+	graphqlServer *graphql_api.GraphqlServer) graceful.Application {
+
+	graphqlServer.RegisterRoutes(publicApi)
+	privateApi.RegisterPrivateRoutes()
+
+	publicServer := publicApi.Build()
+	privateServer := privateApi.Build()
+
+	return &graceful.Graceful{
+		Logger: logger,
+		StartAction: func(ctx context.Context) error {
+			group, errCtx := errgroup.WithContext(ctx)
+
+			group.Go(func() error {
+				daemon.Start(errCtx)
+				return nil
+			})
+
+			group.Go(func() error {
+				return discordSubscriber.Subscribe(errCtx)
+			})
+
+			group.Go(func() error {
+				return privateServer.ListenAndServe()
+			})
+
+			group.Go(func() error {
+				return publicServer.ListenAndServe()
+			})
+
+			return group.Wait()
+		},
+		ShutdownAction: func(ctx context.Context) error {
+			group, errCtx := errgroup.WithContext(ctx)
+
+			group.Go(func() error {
+				return collection.Close()
+			})
+
+			group.Go(func() error {
+				return privateServer.Shutdown(errCtx)
+			})
+
+			group.Go(func() error {
+				return publicServer.Shutdown(errCtx)
+			})
+
+			return group.Wait()
+		},
+	}
 }
 
 func provideOrPanic(container *dig.Container, constructor interface{}, opts ...dig.ProvideOption) {
