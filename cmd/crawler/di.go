@@ -11,7 +11,7 @@ import (
 	"github.com/sealbro/go-feed-me/internal/job"
 	"github.com/sealbro/go-feed-me/internal/storage"
 	"github.com/sealbro/go-feed-me/internal/subscribers"
-	"github.com/sealbro/go-feed-me/pkg/db/sqlite"
+	"github.com/sealbro/go-feed-me/pkg/db"
 	"github.com/sealbro/go-feed-me/pkg/graceful"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
@@ -27,7 +27,7 @@ type jobGroup struct {
 
 type CrawlerSettings struct {
 	*logger.LoggerConfig
-	*sqlite.SqliteConfig
+	*db.DbConfig
 	*api.PublicApiConfig
 	*api.PrivateApiConfig
 	*subscribers.DiscordConfig
@@ -43,7 +43,7 @@ func init() {
 	provideOrPanic(container, graceful.NewShutdownCloser)
 
 	provideOrPanic(container, logger.NewGormLogger)
-	provideOrPanic(container, sqlite.NewSqliteDatabase)
+	provideOrPanic(container, db.NewDatabase)
 	provideOrPanic(container, storage.NewResourceRepository)
 	provideOrPanic(container, storage.NewArticleRepository)
 
@@ -62,7 +62,7 @@ func init() {
 	diContainer = container
 }
 
-func newSettings() (*CrawlerSettings, *logger.LoggerConfig, *sqlite.SqliteConfig, *api.PublicApiConfig, *api.PrivateApiConfig, *subscribers.DiscordConfig) {
+func newSettings() (*CrawlerSettings, *logger.LoggerConfig, *db.DbConfig, *api.PublicApiConfig, *api.PrivateApiConfig, *subscribers.DiscordConfig) {
 	settings := &CrawlerSettings{}
 
 	err := envconfig.Process("", settings)
@@ -70,7 +70,7 @@ func newSettings() (*CrawlerSettings, *logger.LoggerConfig, *sqlite.SqliteConfig
 		panic(fmt.Errorf("can not load settings: %v", err))
 	}
 
-	return settings, settings.LoggerConfig, settings.SqliteConfig, settings.PublicApiConfig, settings.PrivateApiConfig, settings.DiscordConfig
+	return settings, settings.LoggerConfig, settings.DbConfig, settings.PublicApiConfig, settings.PrivateApiConfig, settings.DiscordConfig
 }
 
 func newApplication(logger *logger.Logger,
