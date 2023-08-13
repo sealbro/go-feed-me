@@ -3,6 +3,7 @@ package graph
 import (
 	"github.com/sealbro/go-feed-me/graph/model"
 	"github.com/sealbro/go-feed-me/internal/storage"
+	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
 )
 
@@ -14,4 +15,5 @@ type Resolver struct {
 	*storage.ArticleRepository
 	*storage.ResourceRepository
 	*notifier.SubscriptionManager[*model.FeedArticle]
+	TracerProvider traces.ShutdownTracerProvider
 }

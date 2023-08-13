@@ -12,6 +12,7 @@ import (
 	"github.com/sealbro/go-feed-me/graph/model"
 	"github.com/sealbro/go-feed-me/internal/api"
 	"github.com/sealbro/go-feed-me/internal/storage"
+	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
 	"go.uber.org/zap"
@@ -27,12 +28,14 @@ type GraphqlServer struct {
 func NewGraphqlServer(logger *logger.Logger,
 	articleRepository *storage.ArticleRepository,
 	resourceRepository *storage.ResourceRepository,
+	tracerProvider traces.ShutdownTracerProvider,
 	subscriptionManager *notifier.SubscriptionManager[*model.FeedArticle]) *GraphqlServer {
 	graphqlApi := &GraphqlServer{
 		resolvers: &graph.Resolver{
 			ArticleRepository:   articleRepository,
 			ResourceRepository:  resourceRepository,
 			SubscriptionManager: subscriptionManager,
+			TracerProvider:      tracerProvider,
 		},
 		logger: logger,
 	}
@@ -56,6 +59,8 @@ func (server *GraphqlServer) RegisterRoutes(registrar api.Registrar) {
 		},
 	})
 	srv.Use(extension.Introspection{})
+
+	srv.Use(traces.Tracer{Tracer: server.resolvers.TracerProvider.Tracer("graphql-server")})
 
 	endpoint := registrar.Prefix(urlPrefix, "/query")
 	playgroundEndpoint := registrar.Prefix(urlPrefix, "/")

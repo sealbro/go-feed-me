@@ -11,6 +11,7 @@ import (
 	"github.com/sealbro/go-feed-me/internal/job"
 	"github.com/sealbro/go-feed-me/internal/storage"
 	"github.com/sealbro/go-feed-me/internal/subscribers"
+	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/db"
 	"github.com/sealbro/go-feed-me/pkg/graceful"
 	"github.com/sealbro/go-feed-me/pkg/logger"
@@ -31,6 +32,7 @@ type CrawlerSettings struct {
 	*api.PublicApiConfig
 	*api.PrivateApiConfig
 	*subscribers.DiscordConfig
+	*traces.JaegerConfig
 }
 
 var diContainer *dig.Container
@@ -42,6 +44,7 @@ func init() {
 	provideOrPanic(container, logger.NewLogger)
 	provideOrPanic(container, graceful.NewShutdownCloser)
 
+	provideOrPanic(container, traces.NewTraceProvider)
 	provideOrPanic(container, logger.NewGormLogger)
 	provideOrPanic(container, db.NewDatabase)
 	provideOrPanic(container, storage.NewResourceRepository)
@@ -62,7 +65,15 @@ func init() {
 	diContainer = container
 }
 
-func newSettings() (*CrawlerSettings, *logger.LoggerConfig, *db.DbConfig, *api.PublicApiConfig, *api.PrivateApiConfig, *subscribers.DiscordConfig) {
+func newSettings() (
+	*CrawlerSettings,
+	*logger.LoggerConfig,
+	*db.DbConfig,
+	*api.PublicApiConfig,
+	*api.PrivateApiConfig,
+	*subscribers.DiscordConfig,
+	*traces.JaegerConfig,
+) {
 	settings := &CrawlerSettings{}
 
 	err := envconfig.Process("", settings)
@@ -70,7 +81,13 @@ func newSettings() (*CrawlerSettings, *logger.LoggerConfig, *db.DbConfig, *api.P
 		panic(fmt.Errorf("can not load settings: %v", err))
 	}
 
-	return settings, settings.LoggerConfig, settings.DbConfig, settings.PublicApiConfig, settings.PrivateApiConfig, settings.DiscordConfig
+	return settings,
+		settings.LoggerConfig,
+		settings.DbConfig,
+		settings.PublicApiConfig,
+		settings.PrivateApiConfig,
+		settings.DiscordConfig,
+		settings.JaegerConfig
 }
 
 func newApplication(logger *logger.Logger,
@@ -79,7 +96,9 @@ func newApplication(logger *logger.Logger,
 	discordSubscriber *subscribers.DiscordSubscriber,
 	publicApi *api.PublicApi,
 	privateApi *api.PrivateApi,
-	graphqlServer *graphql_api.GraphqlServer) graceful.Application {
+	graphqlServer *graphql_api.GraphqlServer,
+	tracerProvider traces.ShutdownTracerProvider,
+) graceful.Application {
 
 	graphqlServer.RegisterRoutes(publicApi)
 	privateApi.RegisterPrivateRoutes()
@@ -87,8 +106,12 @@ func newApplication(logger *logger.Logger,
 	publicServer := publicApi.Build()
 	privateServer := privateApi.Build()
 
+	tracer := tracerProvider.Tracer("application")
+	tracerCtx, span := tracer.Start(context.Background(), "graceful")
+
 	return &graceful.Graceful{
-		Logger: logger,
+		MainCtx: tracerCtx,
+		Logger:  logger,
 		StartAction: func(ctx context.Context) error {
 			group, errCtx := errgroup.WithContext(ctx)
 
@@ -112,6 +135,8 @@ func newApplication(logger *logger.Logger,
 			return group.Wait()
 		},
 		ShutdownAction: func(ctx context.Context) error {
+			defer span.End()
+
 			group, errCtx := errgroup.WithContext(ctx)
 
 			group.Go(func() error {
@@ -124,6 +149,10 @@ func newApplication(logger *logger.Logger,
 
 			group.Go(func() error {
 				return publicServer.Shutdown(errCtx)
+			})
+
+			group.Go(func() error {
+				return tracerProvider.Shutdown(errCtx)
 			})
 
 			return group.Wait()

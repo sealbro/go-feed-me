@@ -4,19 +4,58 @@
 
 ## Features
 
+- [x] GraphQL UI and API
+- [x] Store in database (sqlite, postgres)
+- [x] Add new RSS feed resources and store them
+- [x] Fetch new articles from RSS feed resources
+- [x] Notify new articles to graphql subscribers, discord.
+- [ ] Prometheus metrics
+- [ ] Trace metrics
+
+## Quick start
+
+```bash
+docker run -it --rm -p 8080:8080 -p 8081:8081 sealbro/go-feed-me:latest
+```
+
+### Environment variables
+
+| Name                      | Description                  | Default    |
+|---------------------------|------------------------------|------------|
+| `SQLITE_CONNECTION`       | Sqlite file location         | `feed.db`  |
+| `POSTGRES_CONNECTION`     | Postgres connection string   | empty      |
+| `DISCORD_WEBHOOK_ID`      | Discord webhook id           | empty      |
+| `DISCORD_WEBHOOK_TOKEN`   | Discord webhook token        | empty      |
+
+- Postgres [connection string](https://gorm.io/docs/connecting_to_the_database.html#PostgreSQL): `host=<ip or host> user=<username> password=<password> dbname=feed port=5432 sslmode=disable`
+- Discord how get id and token for [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+
 ## Graphql
 
 ### Queries
 
 ```graphql
 query Articles {
-  articles (after: "2023-01-01T15:04:05.999999999Z") {
-    published,
-    link,
-    title,
-    description,
-    content
-  }
+    articles (after: "2023-01-01T15:04:05.999999999Z") {
+        published,
+        link,
+        title,
+        description,
+        content
+    }
+}
+```
+
+```graphql
+query Resources {
+    resources(active: true) {
+        url
+        title
+        active
+        created
+        modified
+        published
+    }
 }
 ```
 
@@ -24,11 +63,11 @@ query Articles {
 
 ```graphql
 mutation AddResources {
-  addResources (resources: [
-    {url: "https://github.com/opencv/opencv/releases.atom"},
-    {url: "https://github.com/openvinotoolkit/openvino/releases.atom"},
-    {url: "https://github.com/hybridgroup/gocv/releases.atom"},
-  ]) 
+    addResources (resources: [
+        {url: "https://github.com/opencv/opencv/releases.atom"},
+        {url: "https://github.com/openvinotoolkit/openvino/releases.atom"},
+        {url: "https://github.com/hybridgroup/gocv/releases.atom"},
+    ]) 
 }
 ```
 

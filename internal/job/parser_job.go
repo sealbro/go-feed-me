@@ -6,8 +6,11 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/sealbro/go-feed-me/graph/model"
 	"github.com/sealbro/go-feed-me/internal/storage"
+	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
+	"go.opentelemetry.io/otel/trace"
+
 	"go.uber.org/zap"
 	"time"
 )
@@ -18,22 +21,29 @@ type ParserFeedJob struct {
 	articleRepository  *storage.ArticleRepository
 	resourceRepository *storage.ResourceRepository
 	manager            *notifier.SubscriptionManager[*model.FeedArticle]
+	tracer             trace.Tracer
 }
 
 func NewParserFeedJob(logger *logger.Logger,
 	articleRepository *storage.ArticleRepository,
 	resourceRepository *storage.ResourceRepository,
-	manager *notifier.SubscriptionManager[*model.FeedArticle]) quartz.Job {
+	tracerProvider traces.ShutdownTracerProvider,
+	manager *notifier.SubscriptionManager[*model.FeedArticle],
+) quartz.Job {
 	return &ParserFeedJob{
 		logger:             logger,
 		manager:            manager,
 		feedParser:         gofeed.NewParser(),
 		articleRepository:  articleRepository,
 		resourceRepository: resourceRepository,
+		tracer:             tracerProvider.Tracer("feed-parser-job"),
 	}
 }
 
 func (p *ParserFeedJob) Execute(ctx context.Context) {
+	ctx, span := p.tracer.Start(ctx, "execute")
+	defer span.End()
+
 	resources, err := p.resourceRepository.List(ctx, true)
 	if err != nil || len(resources) == 0 {
 		p.logger.Ctx(ctx).Warn("not found active resources")
@@ -41,7 +51,7 @@ func (p *ParserFeedJob) Execute(ctx context.Context) {
 	}
 
 	for _, resource := range resources {
-		updatedResource, articles, err := p.FromUrl(ctx, *resource)
+		updatedResource, articles, err := p.fromUrl(ctx, *resource)
 		if err != nil {
 			p.logger.Ctx(ctx).Error("can't parse resource", zap.String("url", resource.Url))
 			return
@@ -100,7 +110,7 @@ func (p *ParserFeedJob) Key() int {
 	return FeedParser
 }
 
-func (p *ParserFeedJob) FromUrl(ctx context.Context, resource storage.Resource) (*storage.Resource, []storage.Article, error) {
+func (p *ParserFeedJob) fromUrl(ctx context.Context, resource storage.Resource) (*storage.Resource, []storage.Article, error) {
 	url := resource.Url
 
 	feed, err := p.feedParser.ParseURLWithContext(url, ctx)

@@ -15,6 +15,7 @@ type Application interface {
 }
 
 type Graceful struct {
+	MainCtx        context.Context
 	Logger         *logger.Logger
 	StartAction    func(ctx context.Context) error
 	ShutdownAction func(ctx context.Context) error
@@ -25,7 +26,7 @@ func (g *Graceful) WaitExitCommand() {
 	waitSignal := make(chan os.Signal, 1)
 	signal.Notify(waitSignal, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	ctx, cancelStartAction := context.WithCancel(context.Background())
+	ctx, cancelStartAction := context.WithCancel(g.MainCtx)
 	go func() {
 		if err := g.StartAction(ctx); err != nil {
 			var msg = "Application StartAction"
