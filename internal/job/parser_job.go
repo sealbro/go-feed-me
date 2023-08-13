@@ -51,36 +51,49 @@ func (p *ParserFeedJob) Execute(ctx context.Context) {
 	}
 
 	for _, resource := range resources {
-		updatedResource, articles, err := p.fromUrl(ctx, *resource)
-		if err != nil {
-			p.logger.Ctx(ctx).Error("can't parse resource", zap.String("url", resource.Url))
+		time.Sleep(3 * time.Second)
+
+		if !p.processResource(ctx, resource) {
 			return
-		}
-
-		if len(articles) == 0 {
-			continue
-		}
-
-		p.notify(articles, resource)
-
-		for _, article := range articles {
-			err = p.articleRepository.Upsert(ctx, &article)
-			if err != nil {
-				p.logger.Ctx(ctx).Error("can't save article", zap.String("url", article.Link))
-				return
-			} else {
-				p.logger.Ctx(ctx).Info("article saved", zap.String("url", article.Link))
-			}
-		}
-
-		err = p.resourceRepository.Upsert(ctx, updatedResource)
-		if err != nil {
-			p.logger.Ctx(ctx).Error("can't save resource", zap.String("url", resource.Url))
-			return
-		} else {
-			p.logger.Ctx(ctx).Info("resource saved", zap.String("url", resource.Url))
 		}
 	}
+}
+
+func (p *ParserFeedJob) processResource(ctx context.Context, resource *storage.Resource) bool {
+	ctx, span := p.tracer.Start(ctx, resource.Url)
+	defer span.End()
+
+	updatedResource, articles, err := p.fromUrl(ctx, *resource)
+	if err != nil {
+		p.logger.Ctx(ctx).Error("can't parse resource", zap.String("url", resource.Url))
+		return true
+	}
+
+	if len(articles) == 0 {
+		return true
+	}
+
+	p.notify(articles, resource)
+
+	for _, article := range articles {
+		err = p.articleRepository.Upsert(ctx, &article)
+		if err != nil {
+			p.logger.Ctx(ctx).Error("can't save article", zap.String("url", article.Link))
+			return false
+		} else {
+			p.logger.Ctx(ctx).Info("article saved", zap.String("url", article.Link))
+		}
+	}
+
+	err = p.resourceRepository.Upsert(ctx, updatedResource)
+	if err != nil {
+		p.logger.Ctx(ctx).Error("can't save resource", zap.String("url", resource.Url))
+		return false
+	} else {
+		p.logger.Ctx(ctx).Info("resource saved", zap.String("url", resource.Url))
+	}
+
+	return true
 }
 
 func (p *ParserFeedJob) notify(articles []storage.Article, resource *storage.Resource) {

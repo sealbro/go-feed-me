@@ -3,29 +3,49 @@ package logger
 import (
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type LoggerConfig struct {
+	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
 }
 
 type Logger struct {
 	*otelzap.Logger
 }
 
-func NewLogger(_ *LoggerConfig) (*Logger, error) {
+func NewLogger(config *LoggerConfig) (*Logger, error) {
 	zapConfig := zap.NewProductionConfig()
-	zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	level := toZapLevel(config.LogLevel)
+	zapConfig.Level = zap.NewAtomicLevelAt(level)
 
 	logger, err := zapConfig.Build()
 	if err != nil {
 		return nil, err
 	}
 
-	log := otelzap.New(logger, otelzap.WithMinLevel(zap.DebugLevel))
-
 	return &Logger{
-		Logger: log,
+		Logger: otelzap.New(logger, otelzap.WithMinLevel(level)),
 	}, nil
+}
+
+func toZapLevel(level string) zapcore.Level {
+	switch level {
+	case zap.DebugLevel.String():
+		return zap.DebugLevel
+	case zap.InfoLevel.String():
+		return zap.InfoLevel
+	case zap.WarnLevel.String():
+		return zap.WarnLevel
+	case zap.ErrorLevel.String():
+		return zap.ErrorLevel
+	case zap.FatalLevel.String():
+		return zap.FatalLevel
+	case zap.PanicLevel.String():
+		return zap.PanicLevel
+	default:
+		return zap.InfoLevel
+	}
 }
 
 //func createEvent(format string, v []interface{}) *LogEvent {
