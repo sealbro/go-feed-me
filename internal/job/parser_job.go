@@ -9,8 +9,8 @@ import (
 	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-
 	"go.uber.org/zap"
 	"time"
 )
@@ -21,7 +21,7 @@ type ParserFeedJob struct {
 	articleRepository  *storage.ArticleRepository
 	resourceRepository *storage.ResourceRepository
 	manager            *notifier.SubscriptionManager[*model.FeedArticle]
-	tracer             trace.Tracer
+	tracerProvider     traces.ShutdownTracerProvider
 }
 
 func NewParserFeedJob(logger *logger.Logger,
@@ -36,12 +36,13 @@ func NewParserFeedJob(logger *logger.Logger,
 		feedParser:         gofeed.NewParser(),
 		articleRepository:  articleRepository,
 		resourceRepository: resourceRepository,
-		tracer:             tracerProvider.Tracer("feed-parser-job"),
+		tracerProvider:     tracerProvider,
 	}
 }
 
 func (p *ParserFeedJob) Execute(ctx context.Context) {
-	ctx, span := p.tracer.Start(ctx, "execute")
+	tracer := p.tracerProvider.Tracer("feed-parser-job")
+	ctx, span := tracer.Start(ctx, "execute")
 	defer span.End()
 
 	resources, err := p.resourceRepository.List(ctx, true)
@@ -50,17 +51,19 @@ func (p *ParserFeedJob) Execute(ctx context.Context) {
 		return
 	}
 
+	span.AddEvent("resources", trace.WithAttributes(attribute.Key("resources.count").Int(len(resources))))
+
 	for _, resource := range resources {
 		time.Sleep(3 * time.Second)
 
-		if !p.processResource(ctx, resource) {
+		if !p.processResource(ctx, tracer, resource) {
 			return
 		}
 	}
 }
 
-func (p *ParserFeedJob) processResource(ctx context.Context, resource *storage.Resource) bool {
-	ctx, span := p.tracer.Start(ctx, resource.Url)
+func (p *ParserFeedJob) processResource(ctx context.Context, tracer trace.Tracer, resource *storage.Resource) bool {
+	ctx, span := tracer.Start(ctx, resource.Url)
 	defer span.End()
 
 	updatedResource, articles, err := p.fromUrl(ctx, *resource)

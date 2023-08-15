@@ -4,6 +4,8 @@ import (
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"io"
+	"log"
 )
 
 type LoggerConfig struct {
@@ -15,17 +17,35 @@ type Logger struct {
 }
 
 func NewLogger(config *LoggerConfig) (*Logger, error) {
+	encodingName := "json_with_hash_encoder"
+	err := zap.RegisterEncoder(encodingName, NewHashJSONEncoder)
+	if err != nil {
+		return nil, err
+	}
+
 	zapConfig := zap.NewProductionConfig()
 	level := toZapLevel(config.LogLevel)
 	zapConfig.Level = zap.NewAtomicLevelAt(level)
+	zapConfig.Encoding = encodingName
+	zapConfig.EncoderConfig.TimeKey = "ts_orig"
+	zapConfig.EncoderConfig.MessageKey = "message"
+	zapConfig.EncoderConfig.CallerKey = "source"
+	zapConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	logger, err := zapConfig.Build()
 	if err != nil {
 		return nil, err
 	}
 
+	// quartz library uses log.Println
+	log.SetOutput(io.Discard)
+
+	tracerLogger := otelzap.New(logger,
+		otelzap.WithMinLevel(level),
+		otelzap.WithTraceIDField(true))
+
 	return &Logger{
-		Logger: otelzap.New(logger, otelzap.WithMinLevel(level)),
+		Logger: tracerLogger,
 	}, nil
 }
 
@@ -47,40 +67,3 @@ func toZapLevel(level string) zapcore.Level {
 		return zap.InfoLevel
 	}
 }
-
-//func createEvent(format string, v []interface{}) *LogEvent {
-//	//traceId := trace.SpanFromContext(ctx).SpanContext().TraceID()
-//	//if traceId.IsValid() {
-//	//	event.TraceId = traceId.String()
-//	//}
-//
-//	return &LogEvent{
-//		Source: getSource(2),
-//		//Level:     toLogLevelStr(level),
-//		Timestamp: time.Now().Format(time.RFC3339),
-//		Message:   fmt.Sprintf(format, v...),
-//		Hash:      calculateHash(format),
-//	}
-//}
-//
-//func getSource(callDepth int) string {
-//	_, file, line, ok := runtime.Caller(callDepth + 1)
-//	if !ok {
-//		file = "???"
-//		line = 0
-//	}
-//
-//	split := strings.Split(file, "/")
-//	file = split[len(split)-1]
-//	return fmt.Sprintf("%s:%d", file, line)
-//}
-//
-//func calculateHash(read string) string {
-//	var hashedValue uint64 = 3074457345618258791
-//	for _, char := range read {
-//		hashedValue += uint64(char)
-//		hashedValue *= 3074457345618258799
-//	}
-//
-//	return strings.ToUpper(fmt.Sprintf("%x", hashedValue))
-//}
