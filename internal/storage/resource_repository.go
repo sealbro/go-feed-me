@@ -30,9 +30,9 @@ func NewResourceRepository(db *db.DB) (*ResourceRepository, error) {
 	return &ResourceRepository{db: db}, nil
 }
 
-func (r *ResourceRepository) Get(ctx context.Context, id int) (*Resource, error) {
+func (r *ResourceRepository) Get(ctx context.Context, url string) (*Resource, error) {
 	dbModel := &Resource{}
-	last := r.db.WithContext(ctx).Last(dbModel, "id = ?", id)
+	last := r.db.WithContext(ctx).Last(dbModel, "url = ?", url)
 	if errors.Is(last.Error, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

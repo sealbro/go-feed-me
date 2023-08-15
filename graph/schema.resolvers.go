@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"github.com/sealbro/go-feed-me/internal/metrics"
 	"strings"
 	"time"
 
@@ -19,14 +20,21 @@ import (
 func (r *mutationResolver) AddResources(ctx context.Context, resources []*model.NewResource) (*string, error) {
 	var errs []error
 	for _, resource := range resources {
+		res, err := r.ResourceRepository.Get(ctx, resource.URL)
+		if err == nil && res != nil {
+			return nil, nil
+		}
+
 		errInner := r.ResourceRepository.Upsert(ctx, &storage.Resource{
 			Created: time.Now(),
 			Url:     strings.TrimSpace(resource.URL),
 			Active:  true,
 		})
+		if errInner == nil {
+			metrics.AddedResourcesCounter.Inc()
+		}
 
 		errs = append(errs, errInner)
-
 	}
 
 	var err error

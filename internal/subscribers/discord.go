@@ -59,7 +59,7 @@ func (s *DiscordSubscriber) processEvents(fireEvents <-chan []*model.FeedArticle
 			revertIndex := len(events) - 1 - i
 			embeds[revertIndex] = discord.Embed{
 				Title:       event.Title,
-				Type:        discord.EmbedTypeArticle,
+				Type:        discord.EmbedTypeRich,
 				Description: event.Description,
 				URL:         event.Link,
 				Timestamp:   &event.Published,

@@ -9,7 +9,7 @@
 - [x] Add new RSS feed resources and store them
 - [x] Fetch new articles from RSS feed resources
 - [x] Notify new articles to graphql subscribers, discord.
-- [x] Prometheus's metrics and Trace logs
+- [x] Observability (logs, metrics, traces)
 
 
 ## Quick start

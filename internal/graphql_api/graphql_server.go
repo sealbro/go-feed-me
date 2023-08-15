@@ -11,6 +11,7 @@ import (
 	"github.com/sealbro/go-feed-me/graph"
 	"github.com/sealbro/go-feed-me/graph/model"
 	"github.com/sealbro/go-feed-me/internal/api"
+	"github.com/sealbro/go-feed-me/internal/metrics"
 	"github.com/sealbro/go-feed-me/internal/storage"
 	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/logger"
@@ -59,8 +60,8 @@ func (server *GraphqlServer) RegisterRoutes(registrar api.Registrar) {
 		},
 	})
 	srv.Use(extension.Introspection{})
-
-	srv.Use(traces.Tracer{Tracer: server.resolvers.TracerProvider.Tracer("graphql-server")})
+	srv.Use(metrics.NewPrometheusMetricsExtension())
+	srv.Use(traces.NewTraceExtension(server.resolvers.TracerProvider))
 
 	endpoint := registrar.Prefix(urlPrefix, "/query")
 	playgroundEndpoint := registrar.Prefix(urlPrefix, "/")

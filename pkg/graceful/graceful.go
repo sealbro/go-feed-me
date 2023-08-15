@@ -2,6 +2,7 @@ package graceful
 
 import (
 	"context"
+	"errors"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"go.uber.org/zap"
 	"os"
@@ -46,7 +47,7 @@ func (g *Graceful) WaitExitCommand() {
 
 	shutdown := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		if err := g.ShutdownAction(ctx); err != nil && err != ctx.Err() {
+		if err := g.ShutdownAction(ctx); err != nil && !errors.Is(err, ctx.Err()) {
 			g.Logger.Ctx(ctx).Error("Application ShutdownAction", zap.Error(err))
 		}
 		cancel()

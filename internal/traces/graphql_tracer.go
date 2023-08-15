@@ -10,29 +10,33 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 )
 
-type (
-	Tracer struct {
-		DisableNonResolverBindingTrace bool
-		OperationName                  string
-		Tracer                         trace.Tracer
+type GraphqlTracer struct {
+	DisableNonResolverBindingTrace bool
+	OperationName                  string
+	tracer                         trace.Tracer
+}
+
+func NewTraceExtension(provider ShutdownTracerProvider) *GraphqlTracer {
+	return &GraphqlTracer{
+		tracer: provider.Tracer("graphql"),
 	}
-)
+}
 
 var _ interface {
 	graphql.HandlerExtension
 	graphql.OperationInterceptor
 	graphql.FieldInterceptor
-} = Tracer{}
+} = GraphqlTracer{}
 
-func (a Tracer) ExtensionName() string {
+func (a GraphqlTracer) ExtensionName() string {
 	return "OpenTracing"
 }
 
-func (a Tracer) Validate(_ graphql.ExecutableSchema) error {
+func (a GraphqlTracer) Validate(_ graphql.ExecutableSchema) error {
 	return nil
 }
 
-func (a Tracer) InterceptOperation(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
+func (a GraphqlTracer) InterceptOperation(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
 	oc := graphql.GetOperationContext(ctx)
 
 	operationName := string(oc.Operation.Operation)
@@ -40,15 +44,16 @@ func (a Tracer) InterceptOperation(ctx context.Context, next graphql.OperationHa
 		operationName = fmt.Sprintf("%s_%s", oc.Operation.Operation, oc.Operation.Name)
 	}
 
-	tracerCtx, span := a.Tracer.Start(ctx, operationName)
-	defer span.End()
-
+	tracerCtx, span := a.tracer.Start(ctx, operationName)
 	span.AddEvent("log", trace.WithAttributes(attribute.Key("log.query").String(oc.RawQuery)))
 
 	return next(tracerCtx)
 }
 
-func (a Tracer) InterceptField(ctx context.Context, next graphql.Resolver) (interface{}, error) {
+func (a GraphqlTracer) InterceptField(ctx context.Context, next graphql.Resolver) (interface{}, error) {
+	span := trace.SpanFromContext(ctx)
+	defer span.End()
+
 	fc := graphql.GetFieldContext(ctx)
 
 	// Check if this field is disabled
@@ -73,7 +78,6 @@ func (a Tracer) InterceptField(ctx context.Context, next graphql.Resolver) (inte
 	}
 
 	if res != nil || len(errList) != 0 {
-		span := trace.SpanFromContext(ctx)
 		span.SetStatus(codes.Error, "GraphQL error")
 		span.AddEvent("errors", trace.WithAttributes(attrs...))
 	}

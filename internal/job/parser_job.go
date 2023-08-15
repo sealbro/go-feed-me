@@ -5,6 +5,7 @@ import (
 	"github.com/mmcdole/gofeed"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/sealbro/go-feed-me/graph/model"
+	"github.com/sealbro/go-feed-me/internal/metrics"
 	"github.com/sealbro/go-feed-me/internal/storage"
 	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/logger"
@@ -76,7 +77,7 @@ func (p *ParserFeedJob) processResource(ctx context.Context, tracer trace.Tracer
 		return true
 	}
 
-	p.notify(articles, resource)
+	p.notify(articles, updatedResource)
 
 	for _, article := range articles {
 		err = p.articleRepository.Upsert(ctx, &article)
@@ -84,6 +85,7 @@ func (p *ParserFeedJob) processResource(ctx context.Context, tracer trace.Tracer
 			p.logger.Ctx(ctx).Error("can't save article", zap.String("url", article.Link))
 			return false
 		} else {
+			metrics.AddedArticlesCounter.Inc()
 			p.logger.Ctx(ctx).Info("article saved", zap.String("url", article.Link))
 		}
 	}

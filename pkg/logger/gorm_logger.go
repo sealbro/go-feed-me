@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"gorm.io/gorm/logger"
 	"time"
 )
@@ -11,11 +12,7 @@ type GormLogger struct {
 	logger   *Logger
 }
 
-func NewGormLogger(logger *Logger) *GormLogger {
-	return &GormLogger{
-		logger: logger,
-	}
-}
+func NewGormLogger(logger *Logger) *GormLogger { return &GormLogger{logger: logger} }
 
 func (l *GormLogger) LogMode(logLevel logger.LogLevel) logger.Interface {
 	l.logLevel = logLevel
@@ -34,5 +31,5 @@ func (l *GormLogger) Error(ctx context.Context, message string, values ...interf
 func (l *GormLogger) Trace(ctx context.Context, _ time.Time, fc func() (sql string, rowsAffected int64), _ error) {
 	sql, rows := fc()
 
-	l.logger.Sugar().Ctx(ctx).Debugf("ROWS: %v, SQL: %v", rows, sql)
+	l.logger.Ctx(ctx).Debug("Sql query", zap.Int64("rows", rows), zap.String("sql", sql))
 }
