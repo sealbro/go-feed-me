@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"fmt"
 	"github.com/mmcdole/gofeed"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/sealbro/go-feed-me/graph/model"
@@ -41,7 +42,7 @@ func NewParserFeedJob(logger *logger.Logger,
 	}
 }
 
-func (p *ParserFeedJob) Execute(ctx context.Context) {
+func (p *ParserFeedJob) Execute(ctx context.Context) error {
 	tracer := p.tracerProvider.Tracer("feed-parser-job")
 	ctx, span := tracer.Start(ctx, "execute")
 	defer span.End()
@@ -49,7 +50,7 @@ func (p *ParserFeedJob) Execute(ctx context.Context) {
 	resources, err := p.resourceRepository.List(ctx, true)
 	if err != nil || len(resources) == 0 {
 		p.logger.Ctx(ctx).Warn("not found active resources")
-		return
+		return err
 	}
 
 	span.AddEvent("resources", trace.WithAttributes(attribute.Key("resources.count").Int(len(resources))))
@@ -58,9 +59,11 @@ func (p *ParserFeedJob) Execute(ctx context.Context) {
 		time.Sleep(3 * time.Second)
 
 		if !p.processResource(ctx, tracer, resource) {
-			return
+			return fmt.Errorf("can't process resource: %s", resource.Url)
 		}
 	}
+
+	return nil
 }
 
 func (p *ParserFeedJob) processResource(ctx context.Context, tracer trace.Tracer, resource *storage.Resource) bool {
@@ -77,6 +80,7 @@ func (p *ParserFeedJob) processResource(ctx context.Context, tracer trace.Tracer
 		return true
 	}
 
+	// TODO: notify only new articles
 	p.notify(articles, updatedResource)
 
 	for _, article := range articles {

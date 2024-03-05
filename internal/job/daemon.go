@@ -39,7 +39,8 @@ func (d *Daemon) Start(ctx context.Context) {
 
 	// TODO replace const time
 	for _, job := range d.jobs {
-		err := d.scheduler.ScheduleJob(ctx, job, trigger)
+		jobDetail := quartz.NewJobDetail(job, quartz.NewJobKey(job.Description()))
+		err := d.scheduler.ScheduleJob(jobDetail, trigger)
 		if err != nil {
 			d.logger.Sugar().Ctx(ctx).Fatalf("can't schedule job: %v", err)
 		}

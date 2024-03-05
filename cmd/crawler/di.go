@@ -32,7 +32,7 @@ type CrawlerSettings struct {
 	*api.PublicApiConfig
 	*api.PrivateApiConfig
 	*subscribers.DiscordConfig
-	*traces.JaegerConfig
+	*traces.TracesConfig
 	*job.DaemonConfig
 }
 
@@ -73,7 +73,7 @@ func newSettings() (
 	*api.PublicApiConfig,
 	*api.PrivateApiConfig,
 	*subscribers.DiscordConfig,
-	*traces.JaegerConfig,
+	*traces.TracesConfig,
 	*job.DaemonConfig,
 ) {
 	settings := &CrawlerSettings{}
@@ -89,7 +89,7 @@ func newSettings() (
 		settings.PublicApiConfig,
 		settings.PrivateApiConfig,
 		settings.DiscordConfig,
-		settings.JaegerConfig,
+		settings.TracesConfig,
 		settings.DaemonConfig
 }
 

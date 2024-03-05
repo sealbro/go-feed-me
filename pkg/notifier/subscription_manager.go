@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+var ErrSubscriptionManagerClosed = fmt.Errorf("subscription manager closed")
+
 type batchConfig struct {
 	BatchSize int
 	BatchTime time.Duration
@@ -18,7 +20,7 @@ type SubscriptionManager[T any] struct {
 	*batchConfig
 
 	subscribers map[string]chan []T
-	output      chan []T
+	output      <-chan []T
 	input       chan T
 	closed      bool
 	logger      *logger.Logger
@@ -36,11 +38,10 @@ func NewSubscriptionManager[T any](logger *logger.Logger, shutdownCloser *gracef
 		closed:      false,
 	}
 
-	manager.output = batchProcess(manager.input, manager.BatchSize, manager.BatchTime)
+	manager.output = SplitByBatchProcess(manager.input, manager.BatchSize, manager.BatchTime)
 
 	go func() {
 		for events := range manager.output {
-
 			logger.Info("Send events to subscribers", zap.Int("links", len(events)), zap.Int("subscribers", len(manager.subscribers)))
 			for _, subscriber := range manager.subscribers {
 				subscriber <- events
@@ -65,7 +66,7 @@ func (manager *SubscriptionManager[T]) Notify(events ...T) {
 
 func (manager *SubscriptionManager[T]) AddSubscriber(ctx context.Context, uniqSubscriberId string) (chan []T, error) {
 	if manager.closed {
-		return nil, fmt.Errorf("SubscriptionManager closed the connection")
+		return nil, ErrSubscriptionManagerClosed
 	}
 
 	key := uniqSubscriberId

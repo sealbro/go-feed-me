@@ -4,11 +4,12 @@ import (
 	"context"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const (
@@ -20,7 +21,7 @@ type ShutdownTracerProvider interface {
 	Shutdown(ctx context.Context) error
 }
 
-type JaegerTracerProvider struct {
+type OtlpTracerProvider struct {
 	*tracesdk.TracerProvider
 }
 
@@ -28,13 +29,14 @@ type JaegerTracerProvider struct {
 // the Jaeger exporter that will send spans to the provided url. The returned
 // ShutdownTracerProvider will also use a Resource configured with all the information
 // about the application.
-func NewTraceProvider(config *JaegerConfig) (ShutdownTracerProvider, error) {
-	if config.AgentHost == "" {
-		return &JaegerTracerProvider{}, nil
+func NewTraceProvider(config *TracesConfig) (ShutdownTracerProvider, error) {
+	if config.OtlpEndpoint == "" {
+		return &OtlpTracerProvider{}, nil
 	}
 
-	// Create the Jaeger exporter
-	exp, err := jaeger.New(jaeger.WithAgentEndpoint())
+	// Create the OLTP exporter
+	background := context.Background()
+	exp, err := otlptracegrpc.New(background, otlptracegrpc.WithEndpointURL(config.OtlpEndpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -54,10 +56,10 @@ func NewTraceProvider(config *JaegerConfig) (ShutdownTracerProvider, error) {
 	// instrumentation in the future will default to using it.
 	otel.SetTracerProvider(tp)
 
-	return &JaegerTracerProvider{tp}, nil
+	return &OtlpTracerProvider{tp}, nil
 }
 
-func (p *JaegerTracerProvider) Shutdown(ctx context.Context) error {
+func (p *OtlpTracerProvider) Shutdown(ctx context.Context) error {
 	if p.TracerProvider == nil {
 		return nil
 	}
@@ -65,9 +67,9 @@ func (p *JaegerTracerProvider) Shutdown(ctx context.Context) error {
 	return p.TracerProvider.Shutdown(ctx)
 }
 
-func (p *JaegerTracerProvider) Tracer(name string) trace.Tracer {
+func (p *OtlpTracerProvider) Tracer(name string) trace.Tracer {
 	if p.TracerProvider == nil {
-		return stubEmptyTracer
+		return noop.Tracer{}
 	}
 
 	return p.TracerProvider.Tracer(name)
