@@ -15,6 +15,6 @@ func HttpHandler() http.Handler {
 	return promhttp.Handler()
 }
 
-func NewPrometheusMetricsExtension() graphql.GraphqlPrometheusMetrics {
-	return graphql.GraphqlPrometheusMetrics{}
+func NewPrometheusMetricsExtension() graphql.PrometheusMetrics {
+	return graphql.PrometheusMetrics{}
 }

@@ -24,14 +24,14 @@ var (
 	timeToHandleRequest      *prometheusclient.HistogramVec
 )
 
-type GraphqlPrometheusMetrics struct{}
+type PrometheusMetrics struct{}
 
 var _ interface {
 	graphql.HandlerExtension
 	graphql.OperationInterceptor
 	graphql.ResponseInterceptor
 	graphql.FieldInterceptor
-} = GraphqlPrometheusMetrics{}
+} = PrometheusMetrics{}
 
 func RegisterOn(registerer prometheusclient.Registerer) {
 	requestStartedCounter = prometheusclient.NewCounter(
@@ -99,20 +99,20 @@ func UnRegisterFrom(registerer prometheusclient.Registerer) {
 	registerer.Unregister(timeToHandleRequest)
 }
 
-func (a GraphqlPrometheusMetrics) ExtensionName() string {
+func (a PrometheusMetrics) ExtensionName() string {
 	return "Prometheus"
 }
 
-func (a GraphqlPrometheusMetrics) Validate(_ graphql.ExecutableSchema) error {
+func (a PrometheusMetrics) Validate(_ graphql.ExecutableSchema) error {
 	return nil
 }
 
-func (a GraphqlPrometheusMetrics) InterceptOperation(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
+func (a PrometheusMetrics) InterceptOperation(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
 	requestStartedCounter.Inc()
 	return next(ctx)
 }
 
-func (a GraphqlPrometheusMetrics) InterceptResponse(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
+func (a PrometheusMetrics) InterceptResponse(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
 	errList := graphql.GetErrors(ctx)
 
 	var exitStatus string
@@ -133,7 +133,7 @@ func (a GraphqlPrometheusMetrics) InterceptResponse(ctx context.Context, next gr
 	return next(ctx)
 }
 
-func (a GraphqlPrometheusMetrics) InterceptField(ctx context.Context, next graphql.Resolver) (interface{}, error) {
+func (a PrometheusMetrics) InterceptField(ctx context.Context, next graphql.Resolver) (interface{}, error) {
 	fc := graphql.GetFieldContext(ctx)
 
 	resolverStartedCounter.WithLabelValues(fc.Object, fc.Field.Name).Inc()

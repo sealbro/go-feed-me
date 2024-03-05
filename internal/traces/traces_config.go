@@ -1,7 +1,7 @@
 package traces
 
-type JaegerConfig struct {
-	AgentHost              string `envconfig:"OTEL_EXPORTER_JAEGER_AGENT_HOST" default:""`
+type TracesConfig struct {
+	OtlpEndpoint           string `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT" default:""`
 	ApplicationSlug        string `envconfig:"SLUG" default:"feed"`
 	ApplicationEnvironment string `envconfig:"ENV" default:"default"`
 }

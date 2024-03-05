@@ -70,14 +70,14 @@ func (a GraphqlTracer) InterceptField(ctx context.Context, next graphql.Resolver
 	}
 
 	errList := graphql.GetFieldErrors(ctx, fc)
-	if len(errList) != 0 {
+	if len(errList) > 0 {
 		for idx, err := range errList {
 			attrs = append(attrs, attribute.Key(fmt.Sprintf("error.%d.message", idx)).String(err.Error()))
 			attrs = append(attrs, attribute.Key(fmt.Sprintf("error.%d.kind", idx)).String(fmt.Sprintf("%T", err)))
 		}
 	}
 
-	if res != nil || len(errList) != 0 {
+	if len(attrs) > 0 {
 		span.SetStatus(codes.Error, "GraphQL error")
 		span.AddEvent("errors", trace.WithAttributes(attrs...))
 	}

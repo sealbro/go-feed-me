@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"io"
 	"log"
+	"strings"
 )
 
 type LoggerConfig struct {
@@ -18,8 +19,9 @@ type Logger struct {
 
 func NewLogger(config *LoggerConfig) (*Logger, error) {
 	encodingName := "json_with_hash_encoder"
+
 	err := zap.RegisterEncoder(encodingName, NewHashJSONEncoder)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "encoder already registered") {
 		return nil, err
 	}
 
