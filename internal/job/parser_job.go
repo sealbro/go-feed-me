@@ -13,7 +13,7 @@ import (
 	"github.com/sealbro/go-feed-me/pkg/notifier"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
+	"log/slog"
 	"time"
 )
 
@@ -49,7 +49,7 @@ func (p *ParserFeedJob) Execute(ctx context.Context) error {
 
 	resources, err := p.resourceRepository.List(ctx, true)
 	if err != nil || len(resources) == 0 {
-		p.logger.Ctx(ctx).Warn("not found active resources")
+		p.logger.WarnContext(ctx, "not found active resources")
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (p *ParserFeedJob) processResource(ctx context.Context, tracer trace.Tracer
 
 	updatedResource, articles, err := p.fromUrl(ctx, *resource)
 	if err != nil {
-		p.logger.Ctx(ctx).Error("can't parse resource", zap.String("url", resource.Url))
+		p.logger.WarnContext(ctx, "can't parse resource", slog.String("url", resource.Url))
 		return true
 	}
 
@@ -86,20 +86,20 @@ func (p *ParserFeedJob) processResource(ctx context.Context, tracer trace.Tracer
 	for _, article := range articles {
 		err = p.articleRepository.Upsert(ctx, &article)
 		if err != nil {
-			p.logger.Ctx(ctx).Error("can't save article", zap.String("url", article.Link))
+			p.logger.ErrorContext(ctx, "can't save article", slog.String("url", article.Link))
 			return false
 		} else {
 			metrics.AddedArticlesCounter.Inc()
-			p.logger.Ctx(ctx).Info("article saved", zap.String("url", article.Link))
+			p.logger.InfoContext(ctx, "article saved", slog.String("url", article.Link))
 		}
 	}
 
 	err = p.resourceRepository.Upsert(ctx, updatedResource)
 	if err != nil {
-		p.logger.Ctx(ctx).Error("can't save resource", zap.String("url", resource.Url))
+		p.logger.ErrorContext(ctx, "can't save resource", slog.String("url", resource.Url))
 		return false
 	} else {
-		p.logger.Ctx(ctx).Info("resource saved", zap.String("url", resource.Url))
+		p.logger.InfoContext(ctx, "resource saved", slog.String("url", resource.Url))
 	}
 
 	return true

@@ -1,71 +1,50 @@
 package logger
 
 import (
-	"github.com/uptrace/opentelemetry-go-extra/otelzap"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"io"
+	quartzlogger "github.com/reugn/go-quartz/logger"
 	"log"
-	"strings"
+	"log/slog"
+	"os"
 )
 
 type LoggerConfig struct {
-	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
+	LogLevel string `envconfig:"LOG_LEVEL" default:"INFO"`
 }
 
 type Logger struct {
-	*otelzap.Logger
+	*slog.Logger
 }
 
 func NewLogger(config *LoggerConfig) (*Logger, error) {
-	encodingName := "json_with_hash_encoder"
-
-	err := zap.RegisterEncoder(encodingName, NewHashJSONEncoder)
-	if err != nil && !strings.Contains(err.Error(), "encoder already registered") {
-		return nil, err
+	level := toSlogLevel(config.LogLevel)
+	opts := &slog.HandlerOptions{
+		AddSource: true,
+		Level:     level,
 	}
+	handler := slog.NewJSONHandler(os.Stdout, opts)
+	logger := slog.New(OtelHandler{Next: &MsgHashHandler{Next: handler}})
 
-	zapConfig := zap.NewProductionConfig()
-	level := toZapLevel(config.LogLevel)
-	zapConfig.Level = zap.NewAtomicLevelAt(level)
-	zapConfig.Encoding = encodingName
-	zapConfig.EncoderConfig.TimeKey = "ts_orig"
-	zapConfig.EncoderConfig.MessageKey = "message"
-	zapConfig.EncoderConfig.CallerKey = "source"
-	zapConfig.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	slog.SetDefault(logger)
 
-	logger, err := zapConfig.Build()
-	if err != nil {
-		return nil, err
-	}
-
-	// quartz library uses log.Println
-	log.SetOutput(io.Discard)
-
-	tracerLogger := otelzap.New(logger,
-		otelzap.WithMinLevel(level),
-		otelzap.WithTraceIDField(true))
+	simpleLogger := quartzlogger.NewSimpleLogger(log.Default(), quartzlogger.Level(level))
+	quartzlogger.SetDefault(simpleLogger)
 
 	return &Logger{
-		Logger: tracerLogger,
+		Logger: logger,
 	}, nil
 }
 
-func toZapLevel(level string) zapcore.Level {
+func toSlogLevel(level string) slog.Level {
 	switch level {
-	case zap.DebugLevel.String():
-		return zap.DebugLevel
-	case zap.InfoLevel.String():
-		return zap.InfoLevel
-	case zap.WarnLevel.String():
-		return zap.WarnLevel
-	case zap.ErrorLevel.String():
-		return zap.ErrorLevel
-	case zap.FatalLevel.String():
-		return zap.FatalLevel
-	case zap.PanicLevel.String():
-		return zap.PanicLevel
+	case slog.LevelDebug.String():
+		return slog.LevelDebug
+	case slog.LevelInfo.String():
+		return slog.LevelInfo
+	case slog.LevelWarn.String():
+		return slog.LevelWarn
+	case slog.LevelError.String():
+		return slog.LevelError
 	default:
-		return zap.InfoLevel
+		return slog.LevelInfo
 	}
 }

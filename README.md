@@ -20,16 +20,16 @@ docker run -it --rm -p 8080:8080 -p 8081:8081 sealbro/go-feed-me:latest
 
 ### Environment variables
 
-| Name                              | Description                | Default          |
-|-----------------------------------|----------------------------|------------------|
-| `SLUG`                            | Path prefix                | `feed`           |
-| `CRON`                            | Cron pattern when run jobs | `1/60 * * * * *` |
-| `SQLITE_CONNECTION`               | Sqlite file location       | `feed.db`        |
-| `POSTGRES_CONNECTION`             | Postgres connection string | empty            |
-| `DISCORD_WEBHOOK_ID`              | Discord webhook id         | empty            |
-| `DISCORD_WEBHOOK_TOKEN`           | Discord webhook token      | empty            |
-| `LOG_LEVEL`                       | Zap log level              | `info`           |
-| `OTEL_EXPORTER_JAEGER_AGENT_HOST` | Jaeger agent host          | empty            |
+| Name                            | Description                | Default          |
+|---------------------------------|----------------------------|------------------|
+| `SLUG`                          | Path prefix                | `feed`           |
+| `CRON`                          | Cron pattern when run jobs | `1/60 * * * * *` |
+| `SQLITE_CONNECTION`             | Sqlite file location       | `feed.db`        |
+| `POSTGRES_CONNECTION`           | Postgres connection string | empty            |
+| `DISCORD_WEBHOOK_ID`            | Discord webhook id         | empty            |
+| `DISCORD_WEBHOOK_TOKEN`         | Discord webhook token      | empty            |
+| `LOG_LEVEL`                     | slog level                 | `INFO`           |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`   | Otlp grpc endpoint         | empty            |
 
 - Postgres's [connection string](https://gorm.io/docs/connecting_to_the_database.html#PostgreSQL): `host=<ip or host> user=<username> password=<password> dbname=feed port=5432 sslmode=disable`
 - Discord how get id and token for [webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)

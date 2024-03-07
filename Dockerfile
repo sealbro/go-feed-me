@@ -1,4 +1,6 @@
-FROM golang:1.22-bullseye as builder
+ARG GO_VERSION=latest
+
+FROM golang:${GO_VERSION} as builder
 
 WORKDIR /src
 COPY . .

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"github.com/sealbro/go-feed-me/pkg/logger"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -32,23 +31,21 @@ func (g *Graceful) WaitExitCommand() {
 		if err := g.StartAction(ctx); err != nil {
 			var msg = "Application StartAction"
 			if ctx.Err() != nil {
-				g.Logger.Ctx(ctx).Debug(msg, zap.Error(err))
-			} else {
-				g.Logger.Ctx(ctx).Fatal(msg, zap.Error(err))
+				g.Logger.DebugContext(ctx, msg, err)
 			}
 		}
 		waitClosing <- struct{}{}
 	}()
-	g.Logger.Ctx(ctx).Info("Application started")
+	g.Logger.InfoContext(ctx, "Application started")
 
 	<-waitSignal
 	cancelStartAction()
-	g.Logger.Ctx(ctx).Info("Application stopped")
+	g.Logger.InfoContext(ctx, "Application stopped")
 
 	shutdown := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		if err := g.ShutdownAction(ctx); err != nil && !errors.Is(err, ctx.Err()) {
-			g.Logger.Ctx(ctx).Error("Application ShutdownAction", zap.Error(err))
+			g.Logger.ErrorContext(ctx, "Application ShutdownAction", err)
 		}
 		cancel()
 	}
@@ -60,5 +57,5 @@ func (g *Graceful) WaitExitCommand() {
 		shutdown()
 	}
 
-	g.Logger.Ctx(ctx).Info("Application exited")
+	g.Logger.InfoContext(ctx, "Application exited")
 }

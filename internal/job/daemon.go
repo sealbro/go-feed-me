@@ -2,13 +2,13 @@ package job
 
 import (
 	"context"
+	"fmt"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 )
 
 const (
-	Default = iota
-	FeedParser
+	FeedParser = iota
 )
 
 type Daemon struct {
@@ -29,12 +29,12 @@ func NewDaemon(logger *logger.Logger, config *DaemonConfig, jobs []quartz.Job) *
 	}
 }
 
-func (d *Daemon) Start(ctx context.Context) {
+func (d *Daemon) Start(ctx context.Context) error {
 	d.scheduler.Start(ctx)
 
 	trigger, err := quartz.NewCronTrigger(d.config.Cron)
 	if err != nil {
-		d.logger.Sugar().Ctx(ctx).Fatalf("can't create cron trigger: %v", err)
+		return fmt.Errorf("can't create cron trigger: %w", err)
 	}
 
 	// TODO replace const time
@@ -42,7 +42,9 @@ func (d *Daemon) Start(ctx context.Context) {
 		jobDetail := quartz.NewJobDetail(job, quartz.NewJobKey(job.Description()))
 		err := d.scheduler.ScheduleJob(jobDetail, trigger)
 		if err != nil {
-			d.logger.Sugar().Ctx(ctx).Fatalf("can't schedule job: %v", err)
+			return fmt.Errorf("can't schedule job: %w", err)
 		}
 	}
+
+	return nil
 }

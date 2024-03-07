@@ -7,11 +7,11 @@ package graph
 import (
 	"context"
 	"errors"
+	"github.com/disgoorg/snowflake/v2"
 	"github.com/sealbro/go-feed-me/internal/metrics"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/sealbro/go-feed-me/graph/model"
 	"github.com/sealbro/go-feed-me/internal/storage"
 )
@@ -97,7 +97,7 @@ func (r *queryResolver) Articles(ctx context.Context, after time.Time) ([]*model
 
 // Articles is the resolver for the articles field.
 func (r *subscriptionResolver) Articles(ctx context.Context) (<-chan []*model.FeedArticle, error) {
-	return r.SubscriptionManager.AddSubscriber(ctx, uuid.New().String())
+	return r.SubscriptionManager.AddSubscriber(ctx, snowflake.New(time.Now()).String())
 }
 
 // Mutation returns MutationResolver implementation.

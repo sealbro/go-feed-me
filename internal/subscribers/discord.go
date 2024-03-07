@@ -10,7 +10,6 @@ import (
 	"github.com/sealbro/go-feed-me/pkg/graceful"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
-	"go.uber.org/zap"
 )
 
 type DiscordSubscriber struct {
@@ -37,12 +36,11 @@ func NewDiscordSubscriber(logger *logger.Logger, config *DiscordConfig,
 
 func (s *DiscordSubscriber) Subscribe(ctx context.Context) error {
 	cancelCtx, cancelFunc := context.WithCancel(ctx)
+	s.cancelFunc = cancelFunc
 	events, err := s.subscriptionManager.AddSubscriber(cancelCtx, "discord")
 	if err != nil {
 		return err
 	}
-
-	s.cancelFunc = cancelFunc
 
 	go s.processEvents(events)
 
@@ -88,7 +86,7 @@ func (s *DiscordSubscriber) processEvents(fireEvents <-chan []*model.FeedArticle
 
 		_, err := client.CreateEmbeds(embeds)
 		if err != nil {
-			s.logger.Error("Failed to send message to discord", zap.Error(err))
+			s.logger.Error("Failed to send message to discord", err)
 		}
 	}
 }
