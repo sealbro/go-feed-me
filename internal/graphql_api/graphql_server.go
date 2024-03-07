@@ -16,7 +16,7 @@ import (
 	"github.com/sealbro/go-feed-me/internal/traces"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
-	"go.uber.org/zap"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -73,5 +73,5 @@ func (server *GraphqlServer) RegisterRoutes(registrar api.Registrar) {
 
 	graphqlUrl := fmt.Sprintf("http://%s%s", registrar.Addr(), playgroundEndpoint)
 
-	server.logger.Info("GraphQl server", zap.String("url", graphqlUrl))
+	server.logger.Info("GraphQl server", slog.String("url", graphqlUrl))
 }

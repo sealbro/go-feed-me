@@ -5,7 +5,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sealbro/go-feed-me/internal/metrics"
 	"github.com/sealbro/go-feed-me/pkg/logger"
-	"go.uber.org/zap"
+	"log/slog"
 	"net/http"
 )
 
@@ -47,7 +47,7 @@ func (a *PrivateApi) RegisterPrivateRoutes() {
 	a.Router.HandleFunc("/readiness", a.readiness).Methods("GET")
 	a.Router.Handle("/metrics", metrics.HttpHandler()).Methods("GET")
 
-	a.logger.Info("Private server", zap.String("url", fmt.Sprintf("http://%s%s", a.Addr(), "/metrics")))
+	a.logger.Info("Private server", slog.String("url", fmt.Sprintf("http://%s%s", a.Addr(), "/metrics")))
 }
 
 func (a *PrivateApi) liveness(writer http.ResponseWriter, _ *http.Request) {

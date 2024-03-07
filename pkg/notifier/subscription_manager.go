@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/sealbro/go-feed-me/pkg/graceful"
 	"github.com/sealbro/go-feed-me/pkg/logger"
-	"go.uber.org/zap"
+	"log/slog"
 	"time"
 )
 
@@ -42,7 +42,7 @@ func NewSubscriptionManager[T any](logger *logger.Logger, shutdownCloser *gracef
 
 	go func() {
 		for events := range manager.output {
-			logger.Info("Send events to subscribers", zap.Int("links", len(events)), zap.Int("subscribers", len(manager.subscribers)))
+			logger.Info("Send events to subscribers", slog.Int("links", len(events)), slog.Int("subscribers", len(manager.subscribers)))
 			for _, subscriber := range manager.subscribers {
 				subscriber <- events
 			}
@@ -73,12 +73,12 @@ func (manager *SubscriptionManager[T]) AddSubscriber(ctx context.Context, uniqSu
 	ch := make(chan []T)
 	manager.subscribers[key] = ch
 
-	manager.logger.Ctx(ctx).Info("SubscriptionManager - Added new subscriber", zap.String("subscriber_id", key))
+	manager.logger.InfoContext(ctx, "SubscriptionManager - Added new subscriber", slog.String("subscriber_id", key))
 
 	go func() {
 		<-ctx.Done()
 		manager.RemoveSubscriber(key)
-		manager.logger.Ctx(ctx).Info("SubscriptionManager - Removed subscriber", zap.String("subscriber_id", key))
+		manager.logger.InfoContext(ctx, "SubscriptionManager - Removed subscriber", slog.String("subscriber_id", key))
 	}()
 
 	return ch, nil

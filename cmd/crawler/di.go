@@ -17,8 +17,8 @@ import (
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"github.com/sealbro/go-feed-me/pkg/notifier"
 	"go.uber.org/dig"
-	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"os"
 )
 
 type jobGroup struct {
@@ -119,18 +119,14 @@ func newApplication(logger *logger.Logger,
 			group, errCtx := errgroup.WithContext(ctx)
 
 			group.Go(func() error {
-				daemon.Start(errCtx)
-				return nil
+				return daemon.Start(errCtx)
 			})
-
 			group.Go(func() error {
 				return discordSubscriber.Subscribe(errCtx)
 			})
-
 			group.Go(func() error {
 				return privateServer.ListenAndServe()
 			})
-
 			group.Go(func() error {
 				return publicServer.ListenAndServe()
 			})
@@ -145,15 +141,12 @@ func newApplication(logger *logger.Logger,
 			group.Go(func() error {
 				return collection.Close()
 			})
-
 			group.Go(func() error {
 				return privateServer.Shutdown(errCtx)
 			})
-
 			group.Go(func() error {
 				return publicServer.Shutdown(errCtx)
 			})
-
 			group.Go(func() error {
 				return tracerProvider.Shutdown(errCtx)
 			})
@@ -170,6 +163,7 @@ func provideOrPanic(container *dig.Container, constructor interface{}, opts ...d
 	}
 
 	_ = container.Invoke(func(logger *logger.Logger) {
-		logger.Fatal("container.Provide", zap.Error(err))
+		logger.Error("container.Provide", err)
+		os.Exit(1)
 	})
 }
