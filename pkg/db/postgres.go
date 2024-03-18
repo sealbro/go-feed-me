@@ -8,24 +8,18 @@ import (
 	"gorm.io/plugin/prometheus"
 )
 
-func NewPostgresDatabase(logger *logger.GormLogger, config *DbConfig) (*DB, error) {
-	schemaName := "public"
-
+func NewPostgresDatabase(logger *logger.GormLogger, config *Config) (*DB, error) {
 	open, err := gorm.Open(postgres.Open(config.PostgresConnection), &gorm.Config{
 		Logger: logger,
 		NamingStrategy: schema.NamingStrategy{
-			TablePrefix: schemaName + ".",
+			TablePrefix: config.PostgresSchema + ".",
 		},
 	})
 
 	err = open.Use(prometheus.New(prometheus.Config{
-		DBName:          schemaName,
+		DBName:          config.PostgresSchema,
 		RefreshInterval: 15,
-		//MetricsCollector: []prometheus.MetricsCollector{
-		//	&prometheus.Postgres{
-		//		VariableNames: []string{"Threads_running"},
-		//	},
-		//},
+		StartServer:     false,
 	}))
 
 	if err != nil {

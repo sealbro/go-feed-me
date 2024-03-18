@@ -7,15 +7,11 @@ import (
 	"os"
 )
 
-type LoggerConfig struct {
-	LogLevel string `envconfig:"LOG_LEVEL" default:"INFO"`
-}
-
 type Logger struct {
 	*slog.Logger
 }
 
-func NewLogger(config *LoggerConfig) (*Logger, error) {
+func NewLogger(config *Config) (*Logger, error) {
 	level := toSlogLevel(config.LogLevel)
 	opts := &slog.HandlerOptions{
 		AddSource: true,

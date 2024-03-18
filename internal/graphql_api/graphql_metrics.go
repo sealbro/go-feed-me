@@ -1,4 +1,4 @@
-package graphql
+package graphql_api
 
 // https://github.com/99designs/gqlgen-contrib/blob/master/prometheus/prometheus.go
 
@@ -84,10 +84,6 @@ func RegisterOn(registerer prometheusclient.Registerer) {
 		timeToResolveField,
 		timeToHandleRequest,
 	)
-}
-
-func UnRegister() {
-	UnRegisterFrom(prometheusclient.DefaultRegisterer)
 }
 
 func UnRegisterFrom(registerer prometheusclient.Registerer) {

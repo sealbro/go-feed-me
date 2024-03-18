@@ -6,6 +6,9 @@ WORKDIR /src
 COPY . .
 
 WORKDIR /src/cmd/crawler
+
+RUN go vet ./...
+RUN go test -cover ./...
 RUN CGO_ENABLED=1 go build -o /bin/runner
 
 FROM gcr.io/distroless/base as runtime

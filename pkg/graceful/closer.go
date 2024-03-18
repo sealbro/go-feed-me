@@ -16,7 +16,6 @@ type ShutdownCloser struct {
 func NewShutdownCloser() *ShutdownCloser {
 	return &ShutdownCloser{
 		services: make(map[string]io.Closer),
-		m:        sync.Mutex{},
 	}
 }
 

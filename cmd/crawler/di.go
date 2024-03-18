@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/kelseyhightower/envconfig"
+	prometheusclient "github.com/prometheus/client_golang/prometheus"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/sealbro/go-feed-me/graph/model"
 	"github.com/sealbro/go-feed-me/internal/api"
 	"github.com/sealbro/go-feed-me/internal/graphql_api"
 	"github.com/sealbro/go-feed-me/internal/job"
+	"github.com/sealbro/go-feed-me/internal/metrics"
 	"github.com/sealbro/go-feed-me/internal/storage"
 	"github.com/sealbro/go-feed-me/internal/subscribers"
 	"github.com/sealbro/go-feed-me/internal/traces"
@@ -27,53 +29,23 @@ type jobGroup struct {
 }
 
 type CrawlerSettings struct {
-	*logger.LoggerConfig
-	*db.DbConfig
+	LoggerConfig *logger.Config
+	DbConfig     *db.Config
 	*api.PublicApiConfig
 	*api.PrivateApiConfig
 	*subscribers.DiscordConfig
-	*traces.TracesConfig
+	TracesConfig *traces.Config
 	*job.DaemonConfig
-}
-
-var diContainer *dig.Container
-
-func init() {
-	container := dig.New()
-
-	provideOrPanic(container, newSettings)
-	provideOrPanic(container, logger.NewLogger)
-	provideOrPanic(container, graceful.NewShutdownCloser)
-
-	provideOrPanic(container, traces.NewTraceProvider)
-	provideOrPanic(container, logger.NewGormLogger)
-	provideOrPanic(container, db.NewDatabase)
-	provideOrPanic(container, storage.NewResourceRepository)
-	provideOrPanic(container, storage.NewArticleRepository)
-
-	provideOrPanic(container, notifier.NewSubscriptionManager[*model.FeedArticle])
-	provideOrPanic(container, subscribers.NewDiscordSubscriber)
-	provideOrPanic(container, job.NewDaemon)
-	provideOrPanic(container, job.NewParserFeedJob, dig.Group("jobs"))
-	provideOrPanic(container, func(group jobGroup) []quartz.Job { return group.Jobs })
-
-	provideOrPanic(container, api.NewPublicApi)
-	provideOrPanic(container, api.NewPrivateApi)
-	provideOrPanic(container, graphql_api.NewGraphqlServer)
-
-	provideOrPanic(container, newApplication)
-
-	diContainer = container
 }
 
 func newSettings() (
 	*CrawlerSettings,
-	*logger.LoggerConfig,
-	*db.DbConfig,
+	*logger.Config,
+	*db.Config,
 	*api.PublicApiConfig,
 	*api.PrivateApiConfig,
 	*subscribers.DiscordConfig,
-	*traces.TracesConfig,
+	*traces.Config,
 	*job.DaemonConfig,
 ) {
 	settings := &CrawlerSettings{}
@@ -93,6 +65,42 @@ func newSettings() (
 		settings.DaemonConfig
 }
 
+func provideApp() (graceful.Application, error) {
+	container := dig.New()
+
+	provideOrPanic(container, newSettings)
+	provideOrPanic(container, logger.NewLogger)
+	provideOrPanic(container, traces.NewTraceProvider)
+	provideOrPanic(container, graceful.NewShutdownCloser)
+	provideOrPanic(container, func() prometheusclient.Registerer {
+		return prometheusclient.DefaultRegisterer
+	})
+
+	provideOrPanic(container, logger.NewGormLogger)
+	provideOrPanic(container, db.NewDatabase)
+	provideOrPanic(container, storage.NewResourceRepository)
+	provideOrPanic(container, storage.NewArticleRepository)
+
+	provideOrPanic(container, notifier.NewSubscriptionManager[*model.FeedArticle])
+	provideOrPanic(container, subscribers.NewDiscordSubscriber)
+	provideOrPanic(container, job.NewDaemon)
+	provideOrPanic(container, job.NewParserFeedJob, dig.Group("jobs"))
+	provideOrPanic(container, func(group jobGroup) []quartz.Job { return group.Jobs })
+
+	provideOrPanic(container, api.NewPublicApi)
+	provideOrPanic(container, api.NewPrivateApi)
+	provideOrPanic(container, graphql_api.NewGraphqlServer)
+
+	provideOrPanic(container, newApplication)
+
+	var app graceful.Application
+	err := container.Invoke(func(application graceful.Application) {
+		app = application
+	})
+
+	return app, err
+}
+
 func newApplication(logger *logger.Logger,
 	collection *graceful.ShutdownCloser,
 	daemon *job.Daemon,
@@ -101,14 +109,19 @@ func newApplication(logger *logger.Logger,
 	privateApi *api.PrivateApi,
 	graphqlServer *graphql_api.GraphqlServer,
 	tracerProvider traces.ShutdownTracerProvider,
+	prometheusRegisterer prometheusclient.Registerer,
 ) graceful.Application {
+	// Register prometheus metrics for promhttp.Handler()
+	graphql_api.RegisterOn(prometheusRegisterer)
+	metrics.RegisterOn(prometheusRegisterer)
 
+	// Register and build api servers
 	graphqlServer.RegisterRoutes(publicApi)
 	privateApi.RegisterPrivateRoutes()
-
 	publicServer := publicApi.Build()
 	privateServer := privateApi.Build()
 
+	// Setup tracer
 	tracer := tracerProvider.Tracer("application")
 	tracerCtx, span := tracer.Start(context.Background(), "graceful")
 
@@ -135,6 +148,10 @@ func newApplication(logger *logger.Logger,
 		},
 		ShutdownAction: func(ctx context.Context) error {
 			defer span.End()
+			defer func() {
+				metrics.UnRegisterFrom(prometheusRegisterer)
+				graphql_api.UnRegisterFrom(prometheusRegisterer)
+			}()
 
 			group, errCtx := errgroup.WithContext(ctx)
 
@@ -163,7 +180,7 @@ func provideOrPanic(container *dig.Container, constructor interface{}, opts ...d
 	}
 
 	_ = container.Invoke(func(logger *logger.Logger) {
-		logger.Error("container.Provide", err)
+		logger.Error("DI container registration wrong or does not exist", err)
 		os.Exit(1)
 	})
 }
