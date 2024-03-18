@@ -13,7 +13,7 @@ import (
 func TestSubscriptionManagerSubscribeAndClose(t *testing.T) {
 	items := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-	newLogger, err := logger.NewLogger(&logger.LoggerConfig{LogLevel: "warn"})
+	newLogger, err := logger.NewLogger(&logger.Config{LogLevel: "warn"})
 	assert.NoError(t, err, "error should be nil")
 
 	closer := graceful.NewShutdownCloser()
@@ -46,7 +46,7 @@ func TestSubscriptionManagerSubscribeAndClose(t *testing.T) {
 func TestSubscriptionManagerGetAllEventsAfterClose(t *testing.T) {
 	items := []int{1, 2, 3, 4, 5, 6, 7, 8}
 
-	newLogger, err := logger.NewLogger(&logger.LoggerConfig{LogLevel: "warn"})
+	newLogger, err := logger.NewLogger(&logger.Config{LogLevel: "warn"})
 	assert.NoError(t, err, "error should be nil")
 
 	closer := graceful.NewShutdownCloser()

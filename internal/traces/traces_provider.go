@@ -29,7 +29,7 @@ type OtlpTracerProvider struct {
 // the Jaeger exporter that will send spans to the provided url. The returned
 // ShutdownTracerProvider will also use a Resource configured with all the information
 // about the application.
-func NewTraceProvider(config *TracesConfig) (ShutdownTracerProvider, error) {
+func NewTraceProvider(config *Config) (ShutdownTracerProvider, error) {
 	if config.OtlpEndpoint == "" {
 		return &OtlpTracerProvider{}, nil
 	}

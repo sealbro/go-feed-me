@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewSqliteDatabase(logger *logger.GormLogger, config *DbConfig) (*DB, error) {
+func NewSqliteDatabase(logger *logger.GormLogger, config *Config) (*DB, error) {
 	open, err := gorm.Open(sqlite.Open(config.SqliteConnection), &gorm.Config{
 		Logger: logger,
 	})

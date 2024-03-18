@@ -3,7 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/sealbro/go-feed-me/internal/metrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sealbro/go-feed-me/pkg/logger"
 	"log/slog"
 	"net/http"
@@ -45,7 +45,7 @@ func (a *PrivateApi) Prefix(serverName string, path string) string {
 func (a *PrivateApi) RegisterPrivateRoutes() {
 	a.Router.HandleFunc("/liveness", a.liveness).Methods("GET")
 	a.Router.HandleFunc("/readiness", a.readiness).Methods("GET")
-	a.Router.Handle("/metrics", metrics.HttpHandler()).Methods("GET")
+	a.Router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 
 	a.logger.Info("Private server", slog.String("url", fmt.Sprintf("http://%s%s", a.Addr(), "/metrics")))
 }
