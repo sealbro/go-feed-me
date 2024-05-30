@@ -15,6 +15,9 @@ func NewPostgresDatabase(logger *logger.GormLogger, config *Config) (*DB, error)
 			TablePrefix: config.PostgresSchema + ".",
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	err = open.Use(prometheus.New(prometheus.Config{
 		DBName:          config.PostgresSchema,
