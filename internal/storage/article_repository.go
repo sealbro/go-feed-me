@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
-	"github.com/sealbro/go-feed-me/pkg/db"
+	"github.com/sealbro/go-feed-me/internal/db"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"

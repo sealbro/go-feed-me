@@ -67,21 +67,6 @@ func (s *DiscordSubscriber) processEvents(fireEvents <-chan []*model.FeedArticle
 				},
 				Author: &discord.EmbedAuthor{Name: event.Author},
 			}
-
-			//convertString, err := s.converter.ConvertString(event.Content)
-			//if err != nil {
-			//	s.logger.Error("Failed to convert html to markdown", zap.Error(err))
-			//	continue
-			//}
-			//if len(convertString) > 2000 {
-			//	convertString = convertString[:1980] + "... :scissors:"
-			//}
-			//content, err := client.CreateContent(convertString)
-			//if err != nil {
-			//	s.logger.Error("Failed to send message to discord", zap.Error(err))
-			//} else {
-			//	s.logger.Info("Message sent to discord", zap.String("message_id", content.ID.String()))
-			//}
 		}
 
 		_, err := client.CreateEmbeds(embeds)

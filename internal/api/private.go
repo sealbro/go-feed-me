@@ -31,7 +31,7 @@ func (a *PrivateApi) Build() *http.Server {
 }
 
 func (a *PrivateApi) Addr() string {
-	return a.Address
+	return prettyAddress(a.Address)
 }
 
 func (a *PrivateApi) RegisterRoutesFunc(fn func(router *mux.Router)) {

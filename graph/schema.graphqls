@@ -34,10 +34,13 @@ type Query {
 
 input NewResource {
   url: String!
+  active: Boolean!
 }
 
 type Mutation {
   addResources(resources: [NewResource!]!): Void
+  removeResources(urls: [String!]!): Void
+  activateResources(urls: [String!]!, active: Boolean!): Void
 }
 
 type Subscription {
