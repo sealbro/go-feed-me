@@ -28,6 +28,16 @@ type FeedResource struct {
 	Active    bool      `json:"active"`
 }
 
+type Mutation struct {
+}
+
 type NewResource struct {
-	URL string `json:"url"`
+	URL    string `json:"url"`
+	Active bool   `json:"active"`
+}
+
+type Query struct {
+}
+
+type Subscription struct {
 }

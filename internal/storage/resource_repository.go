@@ -3,19 +3,19 @@ package storage
 import (
 	"context"
 	"errors"
-	"github.com/sealbro/go-feed-me/pkg/db"
+	"github.com/sealbro/go-feed-me/internal/db"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
 )
 
 type Resource struct {
+	Active    bool      `json:"active"`
 	Created   time.Time `json:"created"`
 	Modified  time.Time `json:"modified"`
 	Published time.Time `json:"published"`
-	Url       string    `json:"url" gorm:"primaryKey"`
 	Title     string    `json:"title"`
-	Active    bool      `json:"active"`
+	Url       string    `json:"url" gorm:"primaryKey"`
 }
 
 type ResourceRepository struct {
@@ -59,6 +59,23 @@ func (r *ResourceRepository) Upsert(ctx context.Context, repoInfo *Resource) err
 		Columns:   []clause.Column{{Name: "url"}},
 		DoUpdates: clause.AssignmentColumns(columns),
 	}).Create(repoInfo)
+
+	return tx.Error
+}
+
+func (r *ResourceRepository) Delete(ctx context.Context, urls []string) error {
+	tx := r.db.WithContext(ctx).Delete(&Resource{}, "url IN ?", urls)
+
+	return tx.Error
+}
+
+func (r *ResourceRepository) Activate(ctx context.Context, urls []string, active bool) error {
+	modified := time.Now()
+
+	tx := r.db.WithContext(ctx).Model(&Resource{}).Where("url IN ?", urls).Updates(map[string]interface{}{
+		"active":   active,
+		"modified": modified,
+	})
 
 	return tx.Error
 }

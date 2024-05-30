@@ -4,7 +4,8 @@ import (
 	"time"
 )
 
-// SplitByBatchProcess https://elliotchance.medium.com/batch-a-channel-by-size-or-time-in-go-92fa3098f65
+// SplitByBatchProcess batch processor that will split a channel into batches of a maximum size or after a maximum timeout.
+// main idea from https://elliotchance.medium.com/batch-a-channel-by-size-or-time-in-go-92fa3098f65
 func SplitByBatchProcess[TItem any](values <-chan TItem, maxItems int, maxTimeout time.Duration) <-chan []TItem {
 	batches := make(chan []TItem)
 
