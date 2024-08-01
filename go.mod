@@ -6,7 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.47
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
 	github.com/disgoorg/disgo v0.18.6
-	github.com/disgoorg/snowflake/v2 v2.0.1
+	github.com/disgoorg/snowflake/v2 v2.0.3
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
