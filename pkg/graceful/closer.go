@@ -36,7 +36,7 @@ func (c *ShutdownCloser) Close() error {
 
 	s := builder.String()
 	if len(s) > 0 {
-		return fmt.Errorf(s)
+		return fmt.Errorf("%s", s)
 	}
 
 	return nil

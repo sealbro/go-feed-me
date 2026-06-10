@@ -71,7 +71,7 @@ func (s *DiscordSubscriber) processEvents(fireEvents <-chan []*model.FeedArticle
 
 		_, err := client.CreateEmbeds(embeds)
 		if err != nil {
-			s.logger.Error("Failed to send message to discord", err)
+			s.logger.Error("Failed to send message to discord", "error", err)
 		}
 	}
 }

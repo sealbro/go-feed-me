@@ -37,7 +37,7 @@ func (g *Graceful) WaitExitSignal() {
 	go func() {
 		if err := g.StartAction(ctx); err != nil {
 			if ctx.Err() != nil {
-				g.Logger.DebugContext(ctx, "Application can't start", err)
+				g.Logger.DebugContext(ctx, "Application can't start", "error", err)
 			}
 		}
 		waitManualClosing <- struct{}{}
@@ -52,7 +52,7 @@ func (g *Graceful) WaitExitSignal() {
 	shutdown := func() {
 		ctx, cancelShutdownTimeoutCtx := context.WithTimeout(context.Background(), timeout)
 		if err := g.ShutdownAction(ctx); err != nil && !errors.Is(err, ctx.Err()) {
-			g.Logger.ErrorContext(ctx, "Application unexpected shutdown", err)
+			g.Logger.ErrorContext(ctx, "Application unexpected shutdown", "error", err)
 		}
 		cancelShutdownTimeoutCtx()
 	}
