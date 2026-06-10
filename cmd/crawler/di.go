@@ -181,7 +181,7 @@ func provideOrPanic(container *dig.Container, constructor interface{}, opts ...d
 	}
 
 	_ = container.Invoke(func(logger *logger.Logger) {
-		logger.Error("DI container registration wrong or does not exist", err)
+		logger.Error("DI container registration wrong or does not exist", "error", err)
 		os.Exit(1)
 	})
 }
