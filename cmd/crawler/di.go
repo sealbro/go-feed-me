@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/kelseyhightower/envconfig"
 	prometheusclient "github.com/prometheus/client_golang/prometheus"
 	"github.com/reugn/go-quartz/quartz"
@@ -20,7 +22,6 @@ import (
 	"github.com/sealbro/go-feed-me/pkg/notifier"
 	"go.uber.org/dig"
 	"golang.org/x/sync/errgroup"
-	"os"
 )
 
 type jobGroup struct {
